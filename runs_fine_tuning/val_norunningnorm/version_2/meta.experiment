@@ -1,0 +1,1 @@
+{"name": "val_norunningnorm", "version": 2, "tags_path": "runs_fine_tuning/val_norunningnorm/version_2/meta_tags.csv", "metrics_path": "runs_fine_tuning/val_norunningnorm/version_2/metrics.csv", "autosave": false, "description": null, "created_at": "2022-08-09 11:50:08.059551", "exp_hash": "val_norunningnorm_v2"}

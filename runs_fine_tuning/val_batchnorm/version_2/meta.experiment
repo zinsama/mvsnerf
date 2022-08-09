@@ -1,0 +1,1 @@
+{"name": "val_batchnorm", "version": 2, "tags_path": "runs_fine_tuning/val_batchnorm/version_2/meta_tags.csv", "metrics_path": "runs_fine_tuning/val_batchnorm/version_2/metrics.csv", "autosave": false, "description": null, "created_at": "2022-08-09 01:24:30.857340", "exp_hash": "val_batchnorm_v2"}
