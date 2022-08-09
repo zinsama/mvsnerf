@@ -604,7 +604,9 @@ def create_nerf_mvs(args, pts_embedder=True, use_mvs=False, dir_embedder=True):
 
     EncodingNet = None
     if use_mvs:
+        #TODO change norm_act type
         EncodingNet = MVSNet().to(device)
+        # EncodingNet = MVSNet().to(device)
         grad_vars += list(EncodingNet.parameters())    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     start = 0
@@ -665,11 +667,13 @@ class ConvBnReLU(nn.Module):
         super(ConvBnReLU, self).__init__()
         self.conv = nn.Conv2d(in_channels, out_channels,
                               kernel_size, stride=stride, padding=pad, bias=False)
-        self.bn = norm_act(out_channels)
-
+        # self.bn = norm_act(out_channels)
+        self.bn = nn.BatchNorm2d(out_channels,track_running_stats=False)
+        self.rl = nn.ReLU()
 
     def forward(self, x):
-        return self.bn(self.conv(x))
+        return self.rl(self.bn(self.conv(x))) 
+        # return self.bn(self.conv(x))
 
 class ConvBnReLU3D(nn.Module):
     def __init__(self, in_channels, out_channels,
@@ -678,11 +682,14 @@ class ConvBnReLU3D(nn.Module):
         super(ConvBnReLU3D, self).__init__()
         self.conv = nn.Conv3d(in_channels, out_channels,
                               kernel_size, stride=stride, padding=pad, bias=False)
-        self.bn = norm_act(out_channels)
+        # self.bn = norm_act(out_channels)
         # self.bn = nn.ReLU()
+        self.bn = nn.BatchNorm3d(out_channels,track_running_stats=False)
+        self.rl = nn.ReLU()
 
     def forward(self, x):
-        return self.bn(self.conv(x))
+        return self.rl(self.bn(self.conv(x))) 
+        # return self.bn(self.conv(x))
 
 ###################################  feature net  ######################################
 class FeatureNet(nn.Module):

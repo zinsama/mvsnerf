@@ -1,4 +1,4 @@
 import torch
-dir = '../mvsnerf/configs/pairs.th'
+dir = './move/pairs.th'
 pair = torch.load(dir)
 print(pair)

@@ -2,6 +2,7 @@ import random
 from opt import config_parser
 from torch.utils.data import DataLoader
 from torch.utils.data import Sampler
+import torchvision.transforms as transforms
 
 from data import dataset_dict
 
@@ -391,6 +392,19 @@ class MVSSystem(LightningModule):
         self.MVSNet.load_state_dict(ckpt['network_mvs_state_dict'])
         print('Loaded checkpoints at', path)
 
+    def load_volume(self,ckpt_dir,name='volume'):
+        path = f'{ckpt_dir}/{name}.tar'
+        ckpt = torch.load(path)
+        for i in range(self.args.multiset_num):
+            self.volume[i].load_state_dict(ckpt[f'volume_{i}'])
+        os.makedirs(f"{ckpt_dir}/feature/",exist_ok=True)
+        for i in range(self.args.multiset_num):
+            for j in range(3):
+                for k in range(3):
+                    img1 = transforms.ToPILImage()(self.volume[i].feat_volume[0][j][k])
+                    img1.save(f"{ckpt_dir}/feature/{i}_{j}_{k}.png")
+
+
 if __name__ == '__main__':
     torch.set_default_dtype(torch.float32)
     args = config_parser()
@@ -401,7 +415,7 @@ if __name__ == '__main__':
                                           save_top_k=0)
 
     system.load_ckpt(args.model_ckpt)
-
+    system.load_volume(args.model_ckpt)
     logger = loggers.TestTubeLogger(
         save_dir="runs_fine_tuning",
         name=args.expname,

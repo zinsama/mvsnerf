@@ -59,8 +59,8 @@ class MVSSystem(LightningModule):
         for i in range(self.args.multiset_num):
             self.val_dataset.append(dataset(args, split='val', idx=i))
         self.init_volume()
-        # for i in range(self.args.multiset_num):
-        #     self.grad_vars += list(self.volume[i].parameters())
+        for i in range(self.args.multiset_num):
+            self.grad_vars += list(self.volume[i].parameters())
         #TODO
         save_dir = f'runs_fine_tuning/{self.args.expname}/ckpts/'
         os.makedirs(save_dir, exist_ok=True)
@@ -83,7 +83,7 @@ class MVSSystem(LightningModule):
                 with torch.no_grad():
                     for i in range(self.args.multiset_num):
                         tmp_volume_feature, _, _ = self.MVSNet(self.imgs[i], self.proj_mats, self.near_far_source, pad=args.pad, lindisp=args.use_disp)
-                        print(tmp_volume_feature.shape)
+                        # print(tmp_volume_feature.shape)
                         for j in range(8):
                             for k in range(16):
                                 img1 = transforms.ToPILImage()(tmp_volume_feature[0][j][k])
@@ -164,7 +164,6 @@ class MVSSystem(LightningModule):
     
 
     def train_dataloader(self):
-        print("!!!!!into here")
         class myloader:
             def __init__(self, loaderlist, len):
                 self.loaderlist = loaderlist
@@ -275,7 +274,7 @@ class MVSSystem(LightningModule):
         self.MVSNet.train()
         rays, img, idx = self.decode_batch(batch)
         idx = idx[0]
-        print(rays.shape,idx)
+        # print(rays.shape,idx)
         img = img.cpu()  # (H, W, 3)
         # mask = batch['mask'][0]
 
@@ -325,7 +324,7 @@ class MVSSystem(LightningModule):
             log['val_psnr_all'] = mse2psnr(torch.mean(img_err_abs2))
             depth_r, _ = visualize_depth(depth_r, self.near_far_source)
             self.logger.experiment.add_images('val/depth_gt_pred', depth_r[None], self.global_step)
-            print(self.global_step,self.args.vis_steps,"!!!!!!!!!")
+            # print(self.global_step,self.args.vis_steps,"!!!!!!!!!")
             if (self.global_step+1)%self.args.vis_steps==0:
                 img_vis = torch.stack((img, rgbs, img_err_abs.cpu()*5)).permute(0,3,1,2)
                 self.logger.experiment.add_images('val/rgb_pred_err', img_vis, self.global_step)
@@ -384,6 +383,36 @@ class MVSSystem(LightningModule):
         torch.save(ckpt2, path2)
         print('Saved checkpoints at', path)
 
+    def load_ckpt(self,ckpt_dir, name='latest' ):
+        save_dir = ckpt_dir
+        path = f'{save_dir}/{name}.tar'
+        #ckpt = {
+        #    'global_step': self.global_step,
+        #    'network_fn_state_dict': self.render_kwargs_train['network_fn'].state_dict(),
+        #    'volume': self.volume.state_dict(),
+        #    'network_mvs_state_dict': self.MVSNet.state_dict()}
+        ckpt = torch.load(path)
+        print(ckpt.keys())
+        print(ckpt['global_step'])
+        self.global_step = ckpt['global_step']
+        self.render_kwargs_train['network_fn'].load_state_dict(ckpt['network_fn_state_dict'])
+        # self.volume.load_state_dict(ckpt['volume'])
+        self.MVSNet.load_state_dict(ckpt['network_mvs_state_dict'])
+
+        if self.render_kwargs_train['network_fine'] is not None:
+            #ckpt['network_fine_state_dict'] = self.render_kwargs_train['network_fine'].state_dict()
+            self.render_kwargs_train['network_fine'].load_state_dict(ckpt['network_fine_state_dict'])
+        #torch.save(ckpt, path)
+        print('Loaded checkpoints at', path)
+
+    def load_volume(self,ckpt_dir,name='volume'):
+        path = f'{ckpt_dir}/{name}.tar'
+        ckpt = torch.load(path)
+        for i in range(self.args.multiset_num):
+            self.volume[i].load_state_dict(ckpt[f'volume_{i}'])
+
+
+    
 if __name__ == '__main__':
     torch.set_default_dtype(torch.float32)
     args = config_parser()
@@ -392,6 +421,9 @@ if __name__ == '__main__':
                                           monitor='val/PSNR',
                                           mode='max',
                                           save_top_k=0)
+
+    # system.load_ckpt(args.model_ckpt)
+    # system.load_volume(args.model_ckpt)
 
     logger = loggers.TestTubeLogger(
         save_dir="runs_fine_tuning",
