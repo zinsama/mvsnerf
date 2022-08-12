@@ -6,6 +6,7 @@ from .owndata import OwnDataset
 from .multiset import multiset
 from .test import Test
 from .myDataset import MyDataset
+from .myDataset2 import MyDataset2
 
 dataset_dict = {'dtu': MVSDatasetDTU,
                 'llff':LLFFDataset,
@@ -14,4 +15,6 @@ dataset_dict = {'dtu': MVSDatasetDTU,
                 'own': OwnDataset,
                 'multiset': multiset,
                 'test': Test,
-                'MyDataset': MyDataset}
+                'MyDataset': MyDataset,
+                'MyDataset2': MyDataset2,
+                }
