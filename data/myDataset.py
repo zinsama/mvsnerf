@@ -213,12 +213,13 @@ class MyDataset(Dataset):
         self.poses[..., 3] /= scale_factor
 
         # sub select training views from pairing file
-        if os.path.exists('configs/pairs.th'):
+        pair_path = os.path.join(self.root_dir, 'pairs.th')
+        if os.path.exists(pair_path):
             name = os.path.basename(self.root_dir)
             try:
-                self.img_idx = torch.load('configs/pairs.th')[f'{name}_{self.split}'] 
+                self.img_idx = torch.load(pair_path)[f'{self.split}'] 
             except:
-                self.img_idx = torch.load('configs/pairs.th')[f'fern_{self.split}']
+                self.img_idx = torch.load(pair_path)[f'fern_{self.split}']
 
             print(f'===> {self.split}ing index: {self.img_idx}')
 
