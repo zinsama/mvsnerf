@@ -14,7 +14,7 @@ h,w = img.shape[:2]
 #生成低通和高通滤波器
 hpf = [np.zeros((h,w,3)) for _ in range(0,4)]
 R = (h+w)//5  #或其他
-p = 10
+p = 25
 # for x in range(w):
 #     for y in range(h):
 #         if ((x-(w-1)/2)**2 + (y-(h-1)/2)**2) < (R**2):

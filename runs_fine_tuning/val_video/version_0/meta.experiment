@@ -1,0 +1,1 @@
+{"name": "val_video", "version": 0, "tags_path": "runs_fine_tuning/val_video/version_0/meta_tags.csv", "metrics_path": "runs_fine_tuning/val_video/version_0/metrics.csv", "autosave": false, "description": null, "created_at": "2022-08-13 09:37:03.255933", "exp_hash": "val_video_v0"}

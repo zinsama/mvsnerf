@@ -276,7 +276,7 @@ class MyDataset2(Dataset):
             self.all_rgbs = torch.stack(self.all_rgbs, 0).reshape(-1,*self.img_wh[::-1], 3)  # (len(self.meta['frames]),h,w,3)
 
     def read_source_views(self, pair_idx=None, device=torch.device("cpu")):
-        poses_bounds = np.load(os.path.join(self.root_dir,'refs/', 'poses_bounds.npy'))  # (N_images, 17)
+        poses_bounds = np.load(os.path.join(self.root_dir, 'poses_bounds2.npy'))  # (N_images, 17)
         image_paths = sorted(glob.glob(os.path.join(self.root_dir, 'refs/*')))
         # load full resolution image then resize
         if self.split in ['train', 'val']:
@@ -299,10 +299,11 @@ class MyDataset2(Dataset):
         # poses = poses @ self.blender2opencv
 
         # sub select training views from pairing file
+        pair_path = os.path.join(self.root_dir, 'pairs.th')
         if pair_idx is None:
             name = os.path.basename(self.root_dir)
             try:
-                pair_idx = torch.load('configs/pairs.th')[f'{name}_train'][:3] 
+                pair_idx = torch.load(pair_path)[f'{self.split}'][:10] 
             except:
                 pair_idx = torch.load('configs/pairs.th')['fern_train'][:3]
 

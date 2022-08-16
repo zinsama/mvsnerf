@@ -332,7 +332,6 @@ def build_color_volume(point_samples, pose_ref, imgs, img_feat=None, downscale=1
 
         colors[...,i*C:i*C+C] = data[0].permute(1, 2, 0)
         del grid, point_samples_pixel, data
-
     return colors
 
 
