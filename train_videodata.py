@@ -314,7 +314,7 @@ class MVSSystem(LightningModule):
         #print(ckpt.keys())
         #self.global_step = ckpt['global_step']
         self.render_kwargs_train['network_fn'].load_state_dict(ckpt['network_fn_state_dict'])
-        # self.volume.load_state_dict(ckpt['volume'])
+        self.volume.load_state_dict(ckpt['volume'])
         self.MVSNet.load_state_dict(ckpt['network_mvs_state_dict'])
 
         if self.render_kwargs_train['network_fine'] is not None:
