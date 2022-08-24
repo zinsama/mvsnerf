@@ -50,9 +50,9 @@ class MVSSystem(LightningModule):
         dataset = dataset_dict[self.args.dataset_name]
         self.train_dataset = dataset(args, split='train')
         self.val_dataset   = dataset(args, split='val')
-        if not args.model_ckpt:
-            self.init_volume()
-            self.grad_vars += list(self.volume.parameters())
+        # if not args.model_ckpt:
+        self.init_volume()
+        self.grad_vars += list(self.volume.parameters())
 
 
     def init_volume(self):
@@ -321,8 +321,8 @@ class MVSSystem(LightningModule):
             #ckpt['network_fine_state_dict'] = self.render_kwargs_train['network_fine'].state_dict()
             self.render_kwargs_train['network_fine'].load_state_dict(ckpt['network_fine_state_dict'])
         #torch.save(ckpt, path)
-        self.init_volume()
-        self.grad_vars += list(self.volume.parameters())
+        # self.init_volume()
+        # self.grad_vars += list(self.volume.parameters())
         print('Loaded checkpoints at', path)
 
 if __name__ == '__main__':

@@ -33,7 +33,7 @@ class MVSSystem(LightningModule):
     def __init__(self, args):
         super(MVSSystem, self).__init__()
         self.args = args
-        self.args.feat_dim = 8+10*4
+        self.args.feat_dim = 8+7*4
         self.args.dir_dim = 3
         self.idx = 0
 

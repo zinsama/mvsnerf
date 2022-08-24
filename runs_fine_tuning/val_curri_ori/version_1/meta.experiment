@@ -1,0 +1,1 @@
+{"name": "val_curri_ori", "version": 1, "tags_path": "runs_fine_tuning/val_curri_ori/version_1/meta_tags.csv", "metrics_path": "runs_fine_tuning/val_curri_ori/version_1/metrics.csv", "autosave": false, "description": null, "created_at": "2022-08-23 14:00:20.224537", "exp_hash": "val_curri_ori_v1"}
