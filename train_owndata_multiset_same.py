@@ -59,17 +59,17 @@ class MVSSystem(LightningModule):
         for i in range(self.args.multiset_num):
             self.val_dataset.append(dataset(args, split='val', idx=i))
         self.init_volume()
-        for i in range(self.args.multiset_num):
-            print(self.volume[i].parameters())
-            self.grad_vars += list(self.volume[i].parameters())
+        # for i in range(self.args.multiset_num):
+        #     print(self.volume[i].parameters())
+        #     self.grad_vars += list(self.volume[i].parameters())
         #TODO
-        save_dir = f'runs_fine_tuning/{self.args.expname}/ckpts/'
-        os.makedirs(save_dir, exist_ok=True)
-        path = f'{save_dir}/volume.tar'
-        ckpt = {}
-        for i in range(self.args.multiset_num):
-            ckpt[f'volume_{i}'] = self.volume[i].state_dict()
-        torch.save(ckpt, path)
+        # save_dir = f'runs_fine_tuning/{self.args.expname}/ckpts/'
+        # os.makedirs(save_dir, exist_ok=True)
+        # path = f'{save_dir}/volume.tar'
+        # ckpt = {}
+        # for i in range(self.args.multiset_num):
+        #     ckpt[f'volume_{i}'] = self.volume[i].state_dict()
+        # torch.save(ckpt, path)
 
     def init_volume(self):
         self.imgs = []
@@ -90,6 +90,7 @@ class MVSSystem(LightningModule):
                         #         img1 = transforms.ToPILImage()(tmp_volume_feature[0][j][k])
                         #         img1.save(f"./feature/{i}_{j}_{k}.png")
                         volume_feature.append(tmp_volume_feature)
+                        del tmp_volume_feature
             else:
                 volume_feature = ckpts['volume']['feat_volume']
                 print('load ckpt volume.')
@@ -124,7 +125,7 @@ class MVSSystem(LightningModule):
                 del vox_pts
         self.volume = []
         for i in range(self.args.multiset_num):
-            self.volume.append(RefVolume(volume_feature[i].detach()).to(device)) 
+            self.volume.append(RefVolume(volume_feature[i]).to(device)) 
         del volume_feature
 
     def update_density_volume(self,idx):
@@ -218,9 +219,17 @@ class MVSSystem(LightningModule):
                           )))
         return myloader(loader,self.args.multiset_num,self.val_dataset)
 
+    def update_volume(self, idx):
+        tmp_volume_feature, _, _ = self.MVSNet(self.imgs[idx], self.proj_mats, self.near_far_source, pad=args.pad, lindisp=args.use_disp)        
+        # del self.volume[idx]
+        self.volume[idx] = RefVolume(tmp_volume_feature).to(device) 
+        del tmp_volume_feature
+
     def training_step(self, batch, batch_nb):
+        torch.cuda.empty_cache()
         rays, rgbs_target,idx = self.decode_batch(batch)
         idx = idx[0]
+        self.update_volume(idx) 
         if args.use_density_volume and 0 == self.global_step%200:
             self.update_density_volume(idx)
 
@@ -333,8 +342,8 @@ class MVSSystem(LightningModule):
 
                 img_vis = torch.cat((img,rgbs,img_err_abs*10,depth_r.permute(1,2,0)),dim=1).numpy()
                 imageio.imwrite(f'runs_fine_tuning/{self.args.expname}/{self.args.expname}/{self.current_epoch}_{self.global_step:08d}_{self.idx:02d}.png', (img_vis*255).astype('uint8'))
-                img_vis = torch.cat((img,rgbs),dim=1).numpy()
-                imageio.imwrite(f'runs_fine_tuning/{self.args.expname}/{self.args.expname}/{self.global_step:08d}_{self.idx:02d}.png', (img_vis*255).astype('uint8'))
+                # img_vis = torch.cat((img,rgbs),dim=1).numpy()
+                # imageio.imwrite(f'runs_fine_tuning/{self.args.expname}/{self.args.expname}/{self.global_step:08d}_{self.idx:02d}.png', (img_vis*255).astype('uint8'))
             self.idx += 1
 
         return log
@@ -448,7 +457,7 @@ if __name__ == '__main__':
                       val_check_interval=3000,
                       benchmark=True,
                       precision=16 if args.use_amp else 32,
-                      amp_level='O1')
+                      amp_level='O2')
 
     trainer.fit(system)
     system.save_ckpt()
