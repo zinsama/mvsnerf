@@ -1,0 +1,1 @@
+{"name": "val_video_correct", "version": 2, "tags_path": "runs_fine_tuning/val_video_correct/version_2/meta_tags.csv", "metrics_path": "runs_fine_tuning/val_video_correct/version_2/metrics.csv", "autosave": false, "description": null, "created_at": "2022-08-25 19:24:02.416114", "exp_hash": "val_video_correct_v2"}

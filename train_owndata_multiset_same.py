@@ -73,60 +73,59 @@ class MVSSystem(LightningModule):
 
     def init_volume(self):
         self.imgs = []
-        volume_feature = []
         for i in range(self.args.multiset_num):
             img,self.proj_mats,self.near_far_source,self.pose_source = self.train_dataset[i].read_source_views(device=device)
             self.imgs.append(img)
-        if args.ckpt:
-            ckpts = torch.load(args.ckpt)
-            if 'volume' not in ckpts.keys():
-                self.MVSNet.train()
-                with torch.no_grad():
-                    for i in range(self.args.multiset_num):
-                        tmp_volume_feature, _, _ = self.MVSNet(self.imgs[i], self.proj_mats, self.near_far_source, pad=args.pad, lindisp=args.use_disp)
-                        # print(tmp_volume_feature.shape)
-                        # for j in range(8):
-                        #     for k in range(16):
-                        #         img1 = transforms.ToPILImage()(tmp_volume_feature[0][j][k])
-                        #         img1.save(f"./feature/{i}_{j}_{k}.png")
-                        volume_feature.append(tmp_volume_feature)
-                        del tmp_volume_feature
-            else:
-                volume_feature = ckpts['volume']['feat_volume']
-                print('load ckpt volume.')
-        else:
-            self.MVSNet.train()
-            with torch.no_grad():
-                for i in range(self.args.multiset_num):
-                    tmp_volume_feature, _, _ = self.MVSNet(self.imgs[i], self.proj_mats, self.near_far_source, pad=args.pad, lindisp=args.use_disp)
-                    volume_feature.append(tmp_volume_feature)
+        # if args.ckpt:
+        #     ckpts = torch.load(args.ckpt)
+        #     if 'volume' not in ckpts.keys():
+        #         self.MVSNet.train()
+        #         with torch.no_grad():
+        #             for i in range(self.args.multiset_num):
+        #                 tmp_volume_feature, _, _ = self.MVSNet(self.imgs[i], self.proj_mats, self.near_far_source, pad=args.pad, lindisp=args.use_disp)
+        #                 # print(tmp_volume_feature.shape)
+        #                 # for j in range(8):
+        #                 #     for k in range(16):
+        #                 #         img1 = transforms.ToPILImage()(tmp_volume_feature[0][j][k])
+        #                 #         img1.save(f"./feature/{i}_{j}_{k}.png")
+        #                 volume_feature.append(tmp_volume_feature)
+        #                 del tmp_volume_feature
+        #     else:
+        #         volume_feature = ckpts['volume']['feat_volume']
+        #         print('load ckpt volume.')
+        # else:
+        #     self.MVSNet.train()
+        #     with torch.no_grad():
+        #         for i in range(self.args.multiset_num):
+        #             tmp_volume_feature, _, _ = self.MVSNet(self.imgs[i], self.proj_mats, self.near_far_source, pad=args.pad, lindisp=args.use_disp)
+        #             volume_feature.append(tmp_volume_feature)
 
         for i in range(self.args.multiset_num):
             self.imgs[i] = self.unpreprocess(self.imgs[i])
 
         # project colors to a volume
         self.density_volume = None
-        if args.use_color_volume or args.use_density_volume:
-            D,H,W = volume_feature[0].shape[-3:]
-            intrinsic, c2w = self.pose_source['intrinsics'][0].clone(), self.pose_source['c2ws'][0]
-            intrinsic[:2] /= 4
-            vox_pts = get_ptsvolume(H-2*args.pad,W-2*args.pad,D, args.pad,  self.near_far_source, intrinsic, c2w)
-            self.color_feature = []
-            for i in range(self.args.multiset_num):
-                self.color_feature.append(build_color_volume(vox_pts, self.pose_source, self.imgs[i], with_mask=True).view(D,H,W,-1).unsqueeze(0).permute(0, 4, 1, 2, 3)) # [N,D,H,W,C]
-            if args.use_color_volume:
-                for i in range(self.args.multiset_num):
-                    volume_feature[i] = torch.cat((volume_feature[i], self.color_feature[i]),dim=1) # [N,C,D,H,W]
+        # if args.use_color_volume or args.use_density_volume:
+        #     D,H,W = volume_feature[0].shape[-3:]
+        #     intrinsic, c2w = self.pose_source['intrinsics'][0].clone(), self.pose_source['c2ws'][0]
+        #     intrinsic[:2] /= 4
+        #     vox_pts = get_ptsvolume(H-2*args.pad,W-2*args.pad,D, args.pad,  self.near_far_source, intrinsic, c2w)
+        #     self.color_feature = []
+        #     for i in range(self.args.multiset_num):
+        #         self.color_feature.append(build_color_volume(vox_pts, self.pose_source, self.imgs[i], with_mask=True).view(D,H,W,-1).unsqueeze(0).permute(0, 4, 1, 2, 3)) # [N,D,H,W,C]
+        #     if args.use_color_volume:
+        #         for i in range(self.args.multiset_num):
+        #             volume_feature[i] = torch.cat((volume_feature[i], self.color_feature[i]),dim=1) # [N,C,D,H,W]
 
-            if args.use_density_volume:
-                self.vox_pts = vox_pts
-                self.density_volume = [_ for _ in range(self.args.multiset_num)]
-            else:
-                del vox_pts
-        self.volume = []
-        for i in range(self.args.multiset_num):
-            self.volume.append(RefVolume(volume_feature[i]).to(device)) 
-        del volume_feature
+        #     if args.use_density_volume:
+        #         self.vox_pts = vox_pts
+        #         self.density_volume = [_ for _ in range(self.args.multiset_num)]
+        #     else:
+        #         del vox_pts
+        # self.volume = []
+        # for i in range(self.args.multiset_num):
+        #     self.volume.append(RefVolume(volume_feature[i]).to(device)) 
+        # del volume_feature
 
     def update_density_volume(self,idx):
         with torch.no_grad():
@@ -229,7 +228,8 @@ class MVSSystem(LightningModule):
         torch.cuda.empty_cache()
         rays, rgbs_target,idx = self.decode_batch(batch)
         idx = idx[0]
-        self.update_volume(idx) 
+        # self.update_volume(idx) 
+        volume_feature, _, _ = self.MVSNet(self.imgs[idx], self.proj_mats, self.near_far_source, pad=args.pad, lindisp=args.use_disp)
         if args.use_density_volume and 0 == self.global_step%200:
             self.update_density_volume(idx)
 
@@ -250,8 +250,10 @@ class MVSSystem(LightningModule):
                                          near=self.near_far_source[0], far=self.near_far_source[1], pad=args.pad, lindisp=args.use_disp)
 
         # rendering
+        # rgbs, disp, acc, depth_pred, alpha, extras = rendering(args, self.pose_source, xyz_coarse_sampled, xyz_NDC, z_vals, rays_o, rays_d,
+        #                                                self.volume[idx], self.imgs[idx],  **self.render_kwargs_train)
         rgbs, disp, acc, depth_pred, alpha, extras = rendering(args, self.pose_source, xyz_coarse_sampled, xyz_NDC, z_vals, rays_o, rays_d,
-                                                       self.volume[idx], self.imgs[idx],  **self.render_kwargs_train)
+                                                       volume_feature, self.imgs[idx],  **self.render_kwargs_train)
 
         log, loss = {}, 0
         if 'rgb0' in extras:
@@ -279,11 +281,18 @@ class MVSSystem(LightningModule):
 
         return  {'loss':loss}
 
+    def on_validation_epoch_start(self):
+        self.volume = []
+        for i in range(self.args.multiset_num):
+            volume_feature, _, _ = self.MVSNet(self.imgs[i], self.proj_mats, self.near_far_source, pad=args.pad, lindisp=args.use_disp)
+            self.volume.append(volume_feature)
+            del volume_feature
 
     def validation_step(self, batch, batch_nb):
         self.MVSNet.train()
         rays, img, idx = self.decode_batch(batch)
         idx = idx[0]
+        
         # print(rays.shape,idx)
         img = img.cpu()  # (H, W, 3)
         # mask = batch['mask'][0]
@@ -306,6 +315,7 @@ class MVSSystem(LightningModule):
                 inv_scale = torch.tensor([W - 1, H - 1]).to(device)
                 w2c_ref, intrinsic_ref = self.pose_source['w2cs'][0], self.pose_source['intrinsics'][0].clone()
                 intrinsic_ref[:2] *= args.imgScale_test/args.imgScale_train
+                # volume_feature, _, _ = self.MVSNet(self.imgs[idx], self.proj_mats, self.near_far_source, pad=args.pad, lindisp=args.use_disp)
                 xyz_NDC = get_ndc_coordinate(w2c_ref, intrinsic_ref, xyz_coarse_sampled, inv_scale,
                                              near=self.near_far_source[0], far=self.near_far_source[1], pad=args.pad*args.imgScale_test, lindisp=args.use_disp)
 
@@ -322,6 +332,10 @@ class MVSSystem(LightningModule):
                                                                        xyz_NDC, z_vals, rays_o, rays_d,
                                                                        self.volume[idx], self.imgs[idx],
                                                                        **self.render_kwargs_train)
+                # rgb, disp, acc, depth_pred, alpha, extras = rendering(args, self.pose_source, xyz_coarse_sampled,
+                #                                                        xyz_NDC, z_vals, rays_o, rays_d,
+                #                                                        self.volume[idx], self.imgs[idx],
+                #                                                        **self.render_kwargs_train)
 
                 rgbs.append(rgb.cpu());depth_preds.append(depth_pred.cpu())
 
@@ -335,15 +349,13 @@ class MVSSystem(LightningModule):
             depth_r, _ = visualize_depth(depth_r, self.near_far_source)
             self.logger.experiment.add_images('val/depth_gt_pred', depth_r[None], self.global_step)
             # print(self.global_step,self.args.vis_steps,"!!!!!!!!!")
-            if (self.global_step+1)%self.args.vis_steps==0:
-                img_vis = torch.stack((img, rgbs, img_err_abs.cpu()*5)).permute(0,3,1,2)
-                self.logger.experiment.add_images('val/rgb_pred_err', img_vis, self.global_step)
-                os.makedirs(f'runs_fine_tuning/{self.args.expname}/{self.args.expname}/',exist_ok=True)
+            # if (self.global_step+1)%self.args.vis_steps==0:
+            img_vis = torch.stack((img, rgbs, img_err_abs.cpu()*5)).permute(0,3,1,2)
+            self.logger.experiment.add_images('val/rgb_pred_err', img_vis, self.global_step)
+            os.makedirs(f'runs_fine_tuning/{self.args.expname}/{self.args.expname}/',exist_ok=True)
 
-                img_vis = torch.cat((img,rgbs,img_err_abs*10,depth_r.permute(1,2,0)),dim=1).numpy()
-                imageio.imwrite(f'runs_fine_tuning/{self.args.expname}/{self.args.expname}/{self.current_epoch}_{self.global_step:08d}_{self.idx:02d}.png', (img_vis*255).astype('uint8'))
-                # img_vis = torch.cat((img,rgbs),dim=1).numpy()
-                # imageio.imwrite(f'runs_fine_tuning/{self.args.expname}/{self.args.expname}/{self.global_step:08d}_{self.idx:02d}.png', (img_vis*255).astype('uint8'))
+            img_vis = torch.cat((img,rgbs,img_err_abs*10,depth_r.permute(1,2,0)),dim=1).numpy()
+            imageio.imwrite(f'runs_fine_tuning/{self.args.expname}/{self.args.expname}/{self.global_step:08d}_{self.idx:02d}.png', (img_vis*255).astype('uint8'))
             self.idx += 1
 
         return log
@@ -381,16 +393,16 @@ class MVSSystem(LightningModule):
         ckpt = {
             'global_step': self.global_step,
             'network_fn_state_dict': self.render_kwargs_train['network_fn'].state_dict(),
-            'volume': self.volume[0].state_dict(),
+            # 'volume': self.volume[0].state_dict(),
             'network_mvs_state_dict': self.MVSNet.state_dict()}
         if self.render_kwargs_train['network_fine'] is not None:
             ckpt['network_fine_state_dict'] = self.render_kwargs_train['network_fine'].state_dict()
         torch.save(ckpt, path)
-        path2 = f'{save_dir}/volume.tar'
-        ckpt2 = {}
-        for i in range(self.args.multiset_num):
-            ckpt2[f'volume_{i}'] = self.volume[i].state_dict()
-        torch.save(ckpt2, path2)
+        # path2 = f'{save_dir}/volume.tar'
+        # ckpt2 = {}
+        # for i in range(self.args.multiset_num):
+        #     ckpt2[f'volume_{i}'] = self.volume[i].state_dict()
+        # torch.save(ckpt2, path2)
         print('Saved checkpoints at', path)
 
     def load_ckpt(self,ckpt_dir, name='latest' ):
@@ -454,7 +466,7 @@ if __name__ == '__main__':
                       distributed_backend='ddp' if args.num_gpus > 1 else None,
                       num_sanity_val_steps=1, #if args.num_gpus > 1 else 5,
                       # check_val_every_n_epoch = max(system.args.num_epochs//system.args.N_vis,1),
-                      val_check_interval=3000,
+                      val_check_interval=5000,
                       benchmark=True,
                       precision=16 if args.use_amp else 32,
                       amp_level='O2')

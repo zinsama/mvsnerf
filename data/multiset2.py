@@ -300,12 +300,13 @@ class multiset2(Dataset):
         # poses = poses @ self.blender2opencv
 
         # sub select training views from pairing file
+        pair_path = os.path.join(self.root_dir, 'pairs.th')
         if pair_idx is None:
             name = os.path.basename(self.root_dir)
             try:
-                pair_idx = torch.load('configs/pairs.th')[f'{name}_train'][:3] 
+                pair_idx = [6,10,14]
             except:
-                pair_idx = torch.load('configs/pairs.th')['fern_train'][:3]
+                pair_idx = torch.load(pair_path)[f'{self.split}'][:3]
 
             # positions = poses[pair_idx,:3,3]
             # dis = np.sum(np.abs(positions - np.mean(positions, axis=0, keepdims=True)), axis=-1)
