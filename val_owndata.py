@@ -239,10 +239,11 @@ class MVSSystem(LightningModule):
             img_err_abs = (rgbs - img).abs()
 
             log['val_psnr_all'] = mse2psnr(torch.mean(img_err_abs ** 2))
-            # print(img.shape) #TODO:ssim and lpips
-            # log['val_ssim_all'] = torch.from_numpy(structural_similarity(img.numpy(),rgbs.numpy(),channel_axis=2,data_range=255)) 
-            # loss_fn_alex = lpips.LPIPS(net='alex',version=0.1)
-            # log['val_lpips_all'] = loss_fn_alex(img, rgbs)
+            # print(img) #TODO:ssim and lpips
+            log['val_ssim_all'] = torch.tensor(structural_similarity(img.numpy(),rgbs.numpy(),channel_axis=2,multichannel=True,data_range=1)) 
+            loss_fn_alex = lpips.LPIPS(net='alex',version=0.1)
+            log['val_lpips_all'] = loss_fn_alex(img.permute(2,0,1).unsqueeze(0), rgbs.permute(2,0,1).unsqueeze(0))
+            print(log['val_lpips_all'])
             depth_r, _ = visualize_depth(depth_r, self.near_far_source)
             self.logger.experiment.add_images('val/depth_gt_pred', depth_r[None], self.global_step)
 
@@ -276,11 +277,11 @@ class MVSSystem(LightningModule):
             self.log(f'val/acc_{self.eval_metric[2]}mm', mean_acc_4mm, prog_bar=False)
 
         mean_psnr_all = torch.stack([x['val_psnr_all'] for x in outputs]).mean()
-        # mean_ssim_all = torch.stack([x['val_ssim_all'] for x in outputs]).mean()
-        # mean_lpips_all = torch.stack([x['val_lpips_all'] for x in outputs]).mean()
+        mean_ssim_all = torch.stack([x['val_ssim_all'] for x in outputs]).mean()
+        mean_lpips_all = torch.stack([x['val_lpips_all'] for x in outputs]).mean()
         self.log('val/PSNR_all', mean_psnr_all, prog_bar=True)
-        # self.log('val/SSIM_all', mean_ssim_all, prog_bar=True)
-        # self.log('val/LPIPS_all', mean_lpips_all, prog_bar=True)
+        self.log('val/SSIM_all', mean_ssim_all, prog_bar=True)
+        self.log('val/LPIPS_all', mean_lpips_all, prog_bar=True)
         return
 
 
@@ -330,7 +331,7 @@ if __name__ == '__main__':
                                           save_top_k=0)
     #print(os.path.join(f'runs_fine_tuning/{args.expname}/ckpts/','{epoch:02d}'))
     if args.model_ckpt:
-        system.load_ckpt(args.model_ckpt,name='80000')
+        system.load_ckpt(args.model_ckpt)
     
     logger = loggers.TestTubeLogger(
         save_dir="runs_fine_tuning",

@@ -1,9 +1,9 @@
 import torch
-dir = './beef_curri'
+dir = '../coffee'
 pair = {}
 pair["train"]=[]
 pair["val"]=[]
-for i in range(0,20):
+for i in range(0,18):
     if i >= 9 and i <= 13:
         pair["val"].append(i)
     else:
@@ -15,5 +15,4 @@ for i in range(0,20):
 #         pair["train"].append(i)
 
 print(pair)
-for i in range(0,10):
-    torch.save(pair,dir+f"/{i}/pairs.th")
+torch.save(pair,dir+f"/pairs.th")

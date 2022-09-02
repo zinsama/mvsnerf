@@ -304,7 +304,7 @@ class multiset2(Dataset):
         if pair_idx is None:
             name = os.path.basename(self.root_dir)
             try:
-                pair_idx = [6,10,14]
+                pair_idx = [6,14,16]
             except:
                 pair_idx = torch.load(pair_path)[f'{self.split}'][:3]
 

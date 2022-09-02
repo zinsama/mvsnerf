@@ -303,6 +303,28 @@ class MVSSystem(LightningModule):
         torch.save(ckpt, path)
         print('Saved checkpoints at', path)
 
+    def load_ckpt(self,ckpt_dir, name='latest' ):
+        save_dir = ckpt_dir
+        path = f'{save_dir}/{name}.tar'
+        #ckpt = {
+        #    'global_step': self.global_step,
+        #    'network_fn_state_dict': self.render_kwargs_train['network_fn'].state_dict(),
+        #    'volume': self.volume.state_dict(),
+        #    'network_mvs_state_dict': self.MVSNet.state_dict()}
+        ckpt = torch.load(path)
+        #print(ckpt.keys())
+        #self.global_step = ckpt['global_step']
+        self.render_kwargs_train['network_fn'].load_state_dict(ckpt['network_fn_state_dict'])
+        # self.volume.load_state_dict(ckpt['volume'])
+        self.MVSNet.load_state_dict(ckpt['network_mvs_state_dict'])
+        
+        if self.render_kwargs_train['network_fine'] is not None:
+            #ckpt['network_fine_state_dict'] = self.render_kwargs_train['network_fine'].state_dict()
+            self.render_kwargs_train['network_fine'].load_state_dict(ckpt['network_fine_state_dict'])
+        #torch.save(ckpt, path)
+        self.init_volume()
+        print('Loaded checkpoints at', path)
+
 if __name__ == '__main__':
     torch.set_default_dtype(torch.float32)
     args = config_parser()
@@ -319,6 +341,9 @@ if __name__ == '__main__':
         create_git_tag=False
     )
 
+    if args.model_ckpt:
+        system.load_ckpt(args.model_ckpt)
+    
     args.num_gpus, args.use_amp = 1, False
     trainer = Trainer(max_epochs=args.num_epochs,
                       checkpoint_callback=checkpoint_callback,

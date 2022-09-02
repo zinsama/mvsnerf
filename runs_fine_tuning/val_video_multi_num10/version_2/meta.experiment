@@ -1,0 +1,1 @@
+{"name": "val_video_multi_num10", "version": 2, "tags_path": "runs_fine_tuning/val_video_multi_num10/version_2/meta_tags.csv", "metrics_path": "runs_fine_tuning/val_video_multi_num10/version_2/metrics.csv", "autosave": false, "description": null, "created_at": "2022-08-30 15:19:45.184757", "exp_hash": "val_video_multi_num10_v2"}
