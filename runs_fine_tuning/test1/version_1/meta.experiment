@@ -1,0 +1,1 @@
+{"name": "test1", "version": 1, "tags_path": "runs_fine_tuning/test1/version_1/meta_tags.csv", "metrics_path": "runs_fine_tuning/test1/version_1/metrics.csv", "autosave": false, "description": null, "created_at": "2022-09-03 15:09:07.349367", "exp_hash": "test1_v1"}
