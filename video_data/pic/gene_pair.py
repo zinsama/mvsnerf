@@ -4,7 +4,7 @@ pair = {}
 pair["train"]=[]
 pair["val"]=[]
 for i in range(0,18):
-    if i >= 9 and i <= 13:
+    if i >= 9 and i <= 12:
         pair["val"].append(i)
     else:
         pair["train"].append(i)

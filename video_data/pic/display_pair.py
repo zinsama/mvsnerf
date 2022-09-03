@@ -1,4 +1,4 @@
 import torch
-dir = './beef_curri2/0/pairs.th'
+dir = '../coffee/pairs.th'
 pair = torch.load(dir)
 print(pair)
