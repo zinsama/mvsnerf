@@ -428,6 +428,7 @@ class MVSSystem(LightningModule):
         ckpt = {
             'global_step': self.global_step,
             'network_fn_state_dict': self.render_kwargs_train['network_fn'].state_dict(),
+            # 'meta_fn_state_dict': self.render_kwargs_train['network_hyper'].state_dict(),#FIXME
             # 'volume': self.volume[0].state_dict(),
             'network_mvs_state_dict': self.MVSNet.state_dict()}
         if self.render_kwargs_train['network_fine'] is not None:
@@ -453,6 +454,7 @@ class MVSSystem(LightningModule):
         print(ckpt['global_step'])
         # self.global_step = ckpt['global_step']
         self.render_kwargs_train['network_fn'].load_state_dict(ckpt['network_fn_state_dict'])
+        # self.render_kwargs_train['network_hyper'].load_state_dict(ckpt['meta_fn_state_dict']) #FIXME
         # self.volume.load_state_dict(ckpt['volume'])
         self.MVSNet.load_state_dict(ckpt['network_mvs_state_dict'])
 

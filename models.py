@@ -5,7 +5,7 @@ from utils import *
 from utils import homo_warp
 from inplace_abn import InPlaceABN
 from renderer import run_network_mvs
-
+import torch.nn.functional as F
 
 def weights_init(m):
     if isinstance(m, nn.Linear):
@@ -534,6 +534,82 @@ class Renderer_linear(nn.Module):
             outputs = torch.cat([rgb, alpha], -1)
         else:
             outputs = self.output_linear(h)
+        return outputs
+
+class Renderer_Mylinear1(nn.Module):
+    def __init__(self, D=8, W=256, input_ch=3, input_ch_views=3, output_ch=4, input_ch_feat=8, skips=[4], use_viewdirs=False):
+        """
+        """
+        super(Renderer_linear, self).__init__()
+        self.D = D
+        self.W = W
+        self.input_ch = input_ch
+        self.input_ch_views = input_ch_views
+        self.skips = skips
+        self.use_viewdirs = use_viewdirs
+        self.in_ch_pts, self.in_ch_views, self.in_ch_feat = input_ch, input_ch_views, input_ch_feat
+
+        self.pts_linears = nn.ModuleList(
+            [nn.Linear(input_ch, W, bias=True)] + [nn.Linear(W, W, bias=True) if i not in self.skips else nn.Linear(W + input_ch, W) for i in range(D-1)])
+        self.pts_bias = nn.Linear(input_ch_feat, W)
+        self.views_linears = nn.ModuleList([nn.Linear(input_ch_views + W, W//2)])
+
+        if use_viewdirs:
+            self.feature_linear = nn.Linear(W, W)
+            self.alpha_linear = nn.Linear(W, 1)
+            self.rgb_linear = nn.Linear(W//2, 3)
+        else:
+            self.output_linear = nn.Linear(W, output_ch)
+
+        self.pts_linears.apply(weights_init)
+        self.views_linears.apply(weights_init)
+        self.feature_linear.apply(weights_init)
+        self.alpha_linear.apply(weights_init)
+        self.rgb_linear.apply(weights_init)
+
+    def forward_alpha(self,x):
+        dim = x.shape[-1]
+        input_pts, input_feats = torch.split(x, [self.in_ch_pts, self.in_ch_feat], dim=-1)
+
+        h = input_pts
+        bias = self.pts_bias(input_feats)
+        for i, l in enumerate(self.pts_linears):
+            h = self.pts_linears[i](h) + bias
+            h = F.relu(h)
+            if i in self.skips:
+                h = torch.cat([input_pts, h], -1)
+
+        alpha = self.alpha_linear(h)
+        return alpha
+
+    def forward(self, x):
+        dim = x.shape[-1]
+        in_ch_feat = dim-self.in_ch_pts-self.in_ch_views
+        input_pts, input_feats, input_views = torch.split(x, [self.in_ch_pts, in_ch_feat, self.in_ch_views], dim=-1)
+
+        h = input_pts
+        bias = self.pts_bias(input_feats) #if in_ch_feat == self.in_ch_feat else  input_feats
+        for i, l in enumerate(self.pts_linears):
+            # print("layer:",i)
+            h = self.pts_linears[i](h) + bias
+            h = F.relu(h)
+            if i in self.skips:
+                h = torch.cat([input_pts, h], -1)
+
+        if self.use_viewdirs:
+            alpha = torch.relu(self.alpha_linear(h))
+            feature = self.feature_linear(h)
+            h = torch.cat([feature, input_views], -1)
+
+            for i, l in enumerate(self.views_linears):
+                h = self.views_linears[i](h)
+                h = F.relu(h)
+
+            rgb = torch.sigmoid(self.rgb_linear(h))
+            outputs = torch.cat([rgb, alpha], -1)
+        else:
+            outputs = self.output_linear(h)
+        # generate para from input_feats and replace
 
         return outputs
 
@@ -558,6 +634,10 @@ class MVSNeRF(nn.Module):
             self.nerf = Renderer_linear(D=D, W=W,input_ch_feat=input_ch_feat,
                      input_ch=input_ch_pts, output_ch=4, skips=skips,
                      input_ch_views=input_ch_views, use_viewdirs=True)
+        elif 'v3' == net_type:
+            self.nerf = Renderer_Mylinear1(D=D, W=W,input_ch_feat=input_ch_feat,
+                     input_ch=input_ch_pts, output_ch=4, skips=skips,
+                     input_ch_views=input_ch_views, use_viewdirs=True)
 
     def forward_alpha(self, x):
         return self.nerf.forward_alpha(x)
@@ -566,25 +646,27 @@ class MVSNeRF(nn.Module):
         RGBA = self.nerf(x)
         return RGBA
 
-class hyper_mlp(nn.Module):  #TODO init network ckpt grad
-    def __init__(self,feat_dim=20,pts_dim=86):
-        """
-        """
-        super(hyper_mlp, self).__init__()
-        self.weight_layer = nn.Linear(in_features=feat_dim,out_features=pts_dim*pts_dim)
-        self.bias_layer = nn.Linear(in_features=feat_dim,out_features=pts_dim)
-        self.meta_layer = nn.Linear(in_features=pts_dim,out_features=pts_dim)
-        self.weight_layer.apply(weights_init)
-        self.bias_layer.apply(weights_init)
+# class hyper_mlp(nn.Module):  #TODO init network ckpt grad
+#     def __init__(self,feat_dim=20,pts_dim=86):
+#         """
+#         """
+#         super(hyper_mlp, self).__init__()
+#         self.pts_dim = pts_dim
+#         self.weight_layer = nn.Linear(in_features=feat_dim,out_features=pts_dim*pts_dim)
+#         self.bias_layer = nn.Linear(in_features=feat_dim,out_features=pts_dim)
+#         self.weight_layer.apply(weights_init)
+#         self.bias_layer.apply(weights_init)
 
 
-    def forward(self, feat, pts):
-        w = self.weight_layer(feat)
-        b = self.bias_layer(feat)
-        self.meta_layer.weight = w
-        self.meta_layer.bias = b
-        outputs = self.meta_layer(pts)
-        return outputs
+#     def forward(self, feat, pts):
+#         w = self.weight_layer(feat)
+#         b = self.bias_layer(feat)
+#         w = w.view(w.shape[0],w.shape[1],self.pts_dim,self.pts_dim)
+#         pts = pts.unsqueeze(dim=-2)
+#         b = b.unsqueeze(dim=-2)
+#         outputs = torch.matmul(pts,w) + b
+#         outputs = outputs.squeeze(dim=-2)
+#         return outputs
 
 def create_nerf_mvs(args, pts_embedder=True, use_mvs=False, dir_embedder=True):
     """Instantiate mvs NeRF's MLP model.
@@ -617,17 +699,16 @@ def create_nerf_mvs(args, pts_embedder=True, use_mvs=False, dir_embedder=True):
                  input_ch_views=input_ch_views, input_ch_feat=args.feat_dim).to(device)
         grad_vars += list(model_fine.parameters())
 
-    meta_fn = hyper_mlp()
-
+    # meta_fn = hyper_mlp().to(device) 
+    # grad_vars += list(meta_fn.parameters())
     #FIXME meta_fn
-    network_query_fn = lambda pts, viewdirs, rays_feats, network_fn: run_network_mvs(pts, viewdirs, rays_feats, network_fn, meta_fn,
+    network_query_fn = lambda pts, viewdirs, rays_feats, network_fn: run_network_mvs(pts, viewdirs, rays_feats, network_fn,
                                                                         embed_fn=embed_fn,
                                                                         embeddirs_fn=embeddirs_fn,
                                                                         netchunk=args.netchunk)
 
     EncodingNet = None
     if use_mvs:
-        #TODO change norm_act type
         EncodingNet = MVSNet().to(device)
         # EncodingNet = MVSNet().to(device)
         grad_vars += list(EncodingNet.parameters())    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -654,7 +735,7 @@ def create_nerf_mvs(args, pts_embedder=True, use_mvs=False, dir_embedder=True):
             EncodingNet.load_state_dict(state_dict)
 
         model.load_state_dict(ckpt['network_fn_state_dict'])
-        m
+       
         # if model_fine is not None:
         #     model_fine.load_state_dict(ckpt['network_fine_state_dict'])
 
@@ -667,7 +748,7 @@ def create_nerf_mvs(args, pts_embedder=True, use_mvs=False, dir_embedder=True):
         'network_fine': model_fine,
         'N_samples': args.N_samples,
         'network_fn': model,
-        'network_hyper': meta_fn,
+        # 'network_hyper': meta_fn, #FIXME
         'network_mvs': EncodingNet,
         'use_viewdirs': args.use_viewdirs,
         'white_bkgd': args.white_bkgd,

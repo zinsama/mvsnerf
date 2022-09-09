@@ -125,7 +125,6 @@ def get_ndc_coordinate(w2c_ref, intrinsic_ref, point_samples, inv_scale, near=1,
         point_samples = torch.matmul(point_samples, R.t()) + T.reshape(1,3)
         invalid_point_mask = point_samples[:,2].abs()<1e-4
         point_samples[invalid_point_mask, 2] =1e-4
-        #TODO
 
     if intrinsic_ref is not None:
         # using projection
