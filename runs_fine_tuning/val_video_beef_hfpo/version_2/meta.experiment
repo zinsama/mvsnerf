@@ -1,0 +1,1 @@
+{"name": "val_video_beef_hfpo", "version": 2, "tags_path": "runs_fine_tuning/val_video_beef_hfpo/version_2/meta_tags.csv", "metrics_path": "runs_fine_tuning/val_video_beef_hfpo/version_2/metrics.csv", "autosave": false, "description": null, "created_at": "2022-09-06 02:53:24.670090", "exp_hash": "val_video_beef_hfpo_v2"}

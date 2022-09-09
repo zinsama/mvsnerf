@@ -21,6 +21,7 @@ def config_parser(cmd=None):
     parser.add_argument('--pad', type=int, default=24)
 
     # loader options
+    parser.add_argument("--scene_num", type=int, default=1,help="number of scene in different environment")
     parser.add_argument("--batch_size", type=int, default=1024)
     parser.add_argument("--multiset_num", type=int, default=3)
     parser.add_argument("--num_epochs", type=int, default=8)

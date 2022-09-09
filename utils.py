@@ -109,8 +109,8 @@ def get_rays_mvs(H, W, intrinsic, c2w, N=1024, isRandom=True, is_precrop_iters=F
 
 
 
-def get_ndc_coordinate(w2c_ref, intrinsic_ref, point_samples, inv_scale, near=2, far=6, pad=0, lindisp=False):
-    #TODO near=2
+def get_ndc_coordinate(w2c_ref, intrinsic_ref, point_samples, inv_scale, near=1, far=6, pad=0, lindisp=False):
+    #TODO ori : near=2 change near and far to proper values
     '''
         point_samples [N_rays N_sample 3]
     '''

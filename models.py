@@ -566,6 +566,26 @@ class MVSNeRF(nn.Module):
         RGBA = self.nerf(x)
         return RGBA
 
+class hyper_mlp(nn.Module):  #TODO init network ckpt grad
+    def __init__(self,feat_dim=20,pts_dim=86):
+        """
+        """
+        super(hyper_mlp, self).__init__()
+        self.weight_layer = nn.Linear(in_features=feat_dim,out_features=pts_dim*pts_dim)
+        self.bias_layer = nn.Linear(in_features=feat_dim,out_features=pts_dim)
+        self.meta_layer = nn.Linear(in_features=pts_dim,out_features=pts_dim)
+        self.weight_layer.apply(weights_init)
+        self.bias_layer.apply(weights_init)
+
+
+    def forward(self, feat, pts):
+        w = self.weight_layer(feat)
+        b = self.bias_layer(feat)
+        self.meta_layer.weight = w
+        self.meta_layer.bias = b
+        outputs = self.meta_layer(pts)
+        return outputs
+
 def create_nerf_mvs(args, pts_embedder=True, use_mvs=False, dir_embedder=True):
     """Instantiate mvs NeRF's MLP model.
     """
@@ -597,7 +617,10 @@ def create_nerf_mvs(args, pts_embedder=True, use_mvs=False, dir_embedder=True):
                  input_ch_views=input_ch_views, input_ch_feat=args.feat_dim).to(device)
         grad_vars += list(model_fine.parameters())
 
-    network_query_fn = lambda pts, viewdirs, rays_feats, network_fn: run_network_mvs(pts, viewdirs, rays_feats, network_fn,
+    meta_fn = hyper_mlp()
+
+    #FIXME meta_fn
+    network_query_fn = lambda pts, viewdirs, rays_feats, network_fn: run_network_mvs(pts, viewdirs, rays_feats, network_fn, meta_fn,
                                                                         embed_fn=embed_fn,
                                                                         embeddirs_fn=embeddirs_fn,
                                                                         netchunk=args.netchunk)
@@ -631,6 +654,7 @@ def create_nerf_mvs(args, pts_embedder=True, use_mvs=False, dir_embedder=True):
             EncodingNet.load_state_dict(state_dict)
 
         model.load_state_dict(ckpt['network_fn_state_dict'])
+        m
         # if model_fine is not None:
         #     model_fine.load_state_dict(ckpt['network_fine_state_dict'])
 
@@ -643,6 +667,7 @@ def create_nerf_mvs(args, pts_embedder=True, use_mvs=False, dir_embedder=True):
         'network_fine': model_fine,
         'N_samples': args.N_samples,
         'network_fn': model,
+        'network_hyper': meta_fn,
         'network_mvs': EncodingNet,
         'use_viewdirs': args.use_viewdirs,
         'white_bkgd': args.white_bkgd,

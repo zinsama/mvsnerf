@@ -1,0 +1,1 @@
+{"name": "val_beef_nobias_2", "version": 1, "tags_path": "runs_fine_tuning/val_beef_nobias_2/version_1/meta_tags.csv", "metrics_path": "runs_fine_tuning/val_beef_nobias_2/version_1/metrics.csv", "autosave": false, "description": null, "created_at": "2022-09-08 11:04:22.213770", "exp_hash": "val_beef_nobias_2_v1"}

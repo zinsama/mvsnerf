@@ -39,8 +39,9 @@ def batchify(fn, chunk):
 
     return ret
 
-def run_network_mvs(pts, viewdirs, alpha_feat, fn, embed_fn, embeddirs_fn, netchunk=1024):
+def run_network_mvs(pts, viewdirs, alpha_feat, fn, meta_fn, embed_fn, embeddirs_fn, netchunk=1024): #FIXME meta_fn
     """Prepares inputs and applies network 'fn'.
+        pts:rays_ndc  alpha_feat:img_feat  fn:mvsnerf
     """
 
     if embed_fn is not None:
@@ -56,8 +57,9 @@ def run_network_mvs(pts, viewdirs, alpha_feat, fn, embed_fn, embeddirs_fn, netch
         if embeddirs_fn is not None:
             viewdirs = embeddirs_fn(viewdirs)
         pts = torch.cat([pts, viewdirs], -1)
-
     alpha_only = viewdirs is None
+    # pts = meta_fn(alpha_feat,pts)
+    print(alpha_feat.shape,pts.shape,"!!!!! alpha_feat.shape")
     outputs_flat = batchify(fn, netchunk)(pts, alpha_only)
     outputs = torch.reshape(outputs_flat, list(pts.shape[:-1]) + [outputs_flat.shape[-1]])
     return outputs

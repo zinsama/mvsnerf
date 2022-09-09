@@ -1,10 +1,11 @@
 import torch
-dir = '../spinach'
+dir = '../beef'
+valid_set = [3,7,11,15,19]
 pair = {}
 pair["train"]=[]
 pair["val"]=[]
-for i in range(0,21):
-    if i >= 9 and i <= 13:
+for i in range(0,20):
+    if i in valid_set:
         pair["val"].append(i)
     else:
         pair["train"].append(i)
