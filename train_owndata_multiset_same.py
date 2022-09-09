@@ -182,6 +182,7 @@ class MVSSystem(LightningModule):
                           pin_memory=True,
                           )))
         return myloader(loader,self.args.multiset_num)
+<<<<<<< HEAD
 
     # def train_dataloader(self):
     #     class myloader:
@@ -217,6 +218,8 @@ class MVSSystem(LightningModule):
     #                       pin_memory=True
     #                       )))
     #     return myloader(loader,self.args.multiset_num,self.train_dataset)
+=======
+>>>>>>> parent of d4621b5... 尝试让coffee收敛
 
     def val_dataloader(self):
         class myloader:
@@ -452,7 +455,7 @@ class MVSSystem(LightningModule):
         ckpt = torch.load(path)
         print(ckpt.keys())
         print(ckpt['global_step'])
-        # self.global_step = ckpt['global_step']
+        self.global_step = ckpt['global_step']
         self.render_kwargs_train['network_fn'].load_state_dict(ckpt['network_fn_state_dict'])
         # self.render_kwargs_train['network_hyper'].load_state_dict(ckpt['meta_fn_state_dict']) #FIXME
         # self.volume.load_state_dict(ckpt['volume'])
@@ -481,8 +484,7 @@ if __name__ == '__main__':
                                           mode='max',
                                           save_top_k=0)
 
-    if(args.model_ckpt):
-        system.load_ckpt(args.model_ckpt,name='mvsnerf-v0')
+    # system.load_ckpt(args.model_ckpt)
     # system.load_volume(args.model_ckpt)
 
     logger = loggers.TestTubeLogger(
