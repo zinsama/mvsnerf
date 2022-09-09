@@ -182,6 +182,7 @@ class MVSSystem(LightningModule):
                           pin_memory=True,
                           )))
         return myloader(loader,self.args.multiset_num)
+<<<<<<< HEAD
 
     # def train_dataloader(self):
     #     class myloader:
@@ -217,6 +218,8 @@ class MVSSystem(LightningModule):
     #                       pin_memory=True
     #                       )))
     #     return myloader(loader,self.args.multiset_num,self.train_dataset)
+=======
+>>>>>>> parent of d4621b5... 尝试让coffee收敛
 
     def val_dataloader(self):
         class myloader:

@@ -303,7 +303,11 @@ class MyDataset(Dataset):
         if pair_idx is None:
             name = os.path.basename(self.root_dir)
             try:
+<<<<<<< HEAD
                 pair_idx = torch.load(pair_path)[f'{self.split}'][:3]
+=======
+                pair_idx = [6,14,18]
+>>>>>>> parent of d4621b5... 尝试让coffee收敛
             except:
                 pair_idx = torch.load(pair_path)[f'{self.split}'][:3]
                 pair_idx = torch.load('configs/pairs.th')['fern_train'][:3]
