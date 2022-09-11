@@ -164,59 +164,59 @@ class MVSSystem(LightningModule):
             return param_group['lr']
     
 
-    # def train_dataloader(self):
-    #     class myloader:
-    #         def __init__(self, loaderlist, len):
-    #             self.loaderlist = loaderlist
-    #             self.len = len
-    #         def __iter__(self):
-    #             return self
-    #         def __next__(self):
-    #             return next(self.loaderlist[random.randint(0,self.len-1)])
-    #     loader = []
-    #     for dataset in self.train_dataset:
-    #         loader.append(iter(DataLoader(dataset,
-    #                       shuffle=True,
-    #                       num_workers=8,
-    #                       batch_size=args.batch_size,
-    #                       pin_memory=True,
-    #                       )))
-    #     return myloader(loader,self.args.multiset_num)
-
     def train_dataloader(self):
         class myloader:
-            def __init__(self, loaderlist, len, train_dataset):
+            def __init__(self, loaderlist, len):
                 self.loaderlist = loaderlist
                 self.len = len
-                self.cur = 0
-                self.train_dataset = train_dataset
             def __iter__(self):
                 return self
             def __next__(self):
-                self.cur = (self.cur+1)%self.len
-                try:
-                    return next(self.loaderlist[self.cur])
-                except StopIteration:
-                    self.reset()
-                    raise StopIteration
-            def reset(self):
-                for i in range(self.len):
-                    self.loaderlist[i] = iter(DataLoader(self.train_dataset[i],
-                          shuffle=True,
-                          num_workers=8,
-                          batch_size=args.batch_size,
-                          pin_memory=True
-                          ))
-                                        
+                return next(self.loaderlist[random.randint(0,self.len-1)])
         loader = []
         for dataset in self.train_dataset:
             loader.append(iter(DataLoader(dataset,
                           shuffle=True,
                           num_workers=8,
                           batch_size=args.batch_size,
-                          pin_memory=True
+                          pin_memory=True,
                           )))
-        return myloader(loader,self.args.multiset_num,self.train_dataset)
+        return myloader(loader,self.args.multiset_num)
+
+    # def train_dataloader(self):
+    #     class myloader:
+    #         def __init__(self, loaderlist, len, train_dataset):
+    #             self.loaderlist = loaderlist
+    #             self.len = len
+    #             self.cur = 0
+    #             self.train_dataset = train_dataset
+    #         def __iter__(self):
+    #             return self
+    #         def __next__(self):
+    #             self.cur = (self.cur+1)%self.len
+    #             try:
+    #                 return next(self.loaderlist[self.cur])
+    #             except StopIteration:
+    #                 self.reset()
+    #                 raise StopIteration
+    #         def reset(self):
+    #             for i in range(self.len):
+    #                 self.loaderlist[i] = iter(DataLoader(self.train_dataset[i],
+    #                       shuffle=True,
+    #                       num_workers=8,
+    #                       batch_size=args.batch_size,
+    #                       pin_memory=True
+    #                       ))
+                                        
+    #     loader = []
+    #     for dataset in self.train_dataset:
+    #         loader.append(iter(DataLoader(dataset,
+    #                       shuffle=True,
+    #                       num_workers=8,
+    #                       batch_size=args.batch_size,
+    #                       pin_memory=True
+    #                       )))
+    #     return myloader(loader,self.args.multiset_num,self.train_dataset)
 
     def val_dataloader(self):
         class myloader:
@@ -324,6 +324,7 @@ class MVSSystem(LightningModule):
             del volume_feature
 
     def validation_step(self, batch, batch_nb):
+        torch.cuda.empty_cache()
         self.MVSNet.train()
         rays, img, idx = self.decode_batch(batch)
         idx = idx[0]

@@ -303,7 +303,7 @@ class MyDataset(Dataset):
         if pair_idx is None:
             name = os.path.basename(self.root_dir)
             try:
-                pair_idx = [6,7,8]
+                pair_idx = torch.load(pair_path)[f'{self.split}'][:3]
             except:
                 pair_idx = torch.load(pair_path)[f'{self.split}'][:3]
                 pair_idx = torch.load('configs/pairs.th')['fern_train'][:3]

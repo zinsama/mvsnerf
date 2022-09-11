@@ -537,8 +537,180 @@ class Renderer_linear(nn.Module):
 
         return outputs
 
+class Renderer_mylinear(nn.Module):
+    def __init__(self, D=8, W=256, input_ch=3, input_ch_views=3, output_ch=4, input_ch_feat=8, skips=[4], use_viewdirs=False):
+        """
+        """
+        super(Renderer_mylinear, self).__init__()
+        self.D = D
+        self.W = W
+        self.input_ch = input_ch
+        self.input_ch_views = input_ch_views
+        self.skips = skips
+        self.use_viewdirs = use_viewdirs
+        self.in_ch_pts, self.in_ch_views, self.in_ch_feat = input_ch, input_ch_views, input_ch_feat
+
+        self.pts_linears = nn.ModuleList(
+            [nn.Linear(input_ch, W, bias=True)] + [nn.Linear(W, W, bias=True) if i not in self.skips else nn.Linear(W + input_ch, W) for i in range(D-1)])
+        self.pts_bias = nn.Linear(input_ch_feat, W)
+        self.views_linears = nn.ModuleList([nn.Linear(input_ch_views + W, W//2)])
+        self.meta_linears = nn.Linear(input_ch_feat, 128*128)
+
+
+        if use_viewdirs:
+            self.feature_linear = nn.Linear(W, W)
+            self.alpha_linear = nn.Linear(W, 1)
+            self.rgb_linear = nn.Linear(W//2, 3)
+        else:
+            self.output_linear = nn.Linear(W, output_ch)
+
+        self.pts_linears.apply(weights_init)
+        self.views_linears.apply(weights_init)
+        self.feature_linear.apply(weights_init)
+        self.alpha_linear.apply(weights_init)
+        self.rgb_linear.apply(weights_init)
+        
+
+    def forward_alpha(self,x):
+        dim = x.shape[-1]
+        input_pts, input_feats = torch.split(x, [self.in_ch_pts, self.in_ch_feat], dim=-1)
+
+        h = input_pts
+        bias = self.pts_bias(input_feats)
+        for i, l in enumerate(self.pts_linears):
+            h = self.pts_linears[i](h) + bias
+            h = F.relu(h)
+            if i in self.skips:
+                h = torch.cat([input_pts, h], -1)
+
+        alpha = self.alpha_linear(h)
+        return alpha
+
+    def forward(self, x):
+        dim = x.shape[-1]
+        in_ch_feat = dim-self.in_ch_pts-self.in_ch_views
+        input_pts, input_feats, input_views = torch.split(x, [self.in_ch_pts, in_ch_feat, self.in_ch_views], dim=-1)
+
+        h = input_pts
+        bias = self.pts_bias(input_feats) #if in_ch_feat == self.in_ch_feat else  input_feats
+        feat_weight = self.meta_linears(input_feats)
+        # print(feat_weight.shape) 1024(chunk)*128(netwidth)*128(netwidth)*128(netwidth)
+        feat_weight = feat_weight.view(feat_weight.shape[0],feat_weight.shape[1],128,128)
+        # print(bias.shape)
+        for i, l in enumerate(self.pts_linears):
+            if i == 6:
+                h = torch.matmul(h.unsqueeze(dim=-2),feat_weight).squeeze(dim=-2) + bias
+            else:
+                h = self.pts_linears[i](h) + bias
+            h = F.relu(h)
+            if i in self.skips:
+                h = torch.cat([input_pts, h], -1)
+
+
+        if self.use_viewdirs:
+            alpha = torch.relu(self.alpha_linear(h))
+            feature = self.feature_linear(h)
+            h = torch.cat([feature, input_views], -1)
+
+            for i, l in enumerate(self.views_linears):
+                h = self.views_linears[i](h)
+                h = F.relu(h)
+
+            rgb = torch.sigmoid(self.rgb_linear(h))
+            outputs = torch.cat([rgb, alpha], -1)
+        else:
+            outputs = self.output_linear(h)
+
+        return outputs
+
+class Renderer_mylinear2(nn.Module):
+    def __init__(self, D=8, W=256, input_ch=3, input_ch_views=3, output_ch=4, input_ch_feat=8, skips=[4], use_viewdirs=False):
+        """
+        """
+        super(Renderer_mylinear2, self).__init__()
+        self.D = D
+        self.W = W
+        self.input_ch = input_ch
+        self.input_ch_views = input_ch_views
+        self.skips = skips
+        self.use_viewdirs = use_viewdirs
+        self.in_ch_pts, self.in_ch_views, self.in_ch_feat = input_ch, input_ch_views, input_ch_feat
+
+        self.pts_linears = nn.ModuleList(
+            [nn.Linear(input_ch, W, bias=True)] + [nn.Linear(W, W, bias=True) if i not in self.skips else nn.Linear(W + input_ch, W) for i in range(D-1)])
+        self.pts_bias = nn.Linear(input_ch_feat, W)
+        self.views_linears = nn.ModuleList([nn.Linear(input_ch_views + W, W//2)])
+        self.meta_linears = nn.Linear(input_ch_feat, 128*128)
+
+
+        if use_viewdirs:
+            self.feature_linear = nn.Linear(W, W)
+            self.alpha_linear = nn.Linear(W, 1)
+            self.rgb_linear = nn.Linear(W//2, 3)
+        else:
+            self.output_linear = nn.Linear(W, output_ch)
+
+        self.pts_linears.apply(weights_init)
+        self.views_linears.apply(weights_init)
+        self.feature_linear.apply(weights_init)
+        self.alpha_linear.apply(weights_init)
+        self.rgb_linear.apply(weights_init)
+        
+
+    def forward_alpha(self,x):
+        dim = x.shape[-1]
+        input_pts, input_feats = torch.split(x, [self.in_ch_pts, self.in_ch_feat], dim=-1)
+
+        h = input_pts
+        bias = self.pts_bias(input_feats)
+        for i, l in enumerate(self.pts_linears):
+            h = self.pts_linears[i](h) + bias
+            h = F.relu(h)
+            if i in self.skips:
+                h = torch.cat([input_pts, h], -1)
+
+        alpha = self.alpha_linear(h)
+        return alpha
+
+    def forward(self, x):
+        dim = x.shape[-1]
+        in_ch_feat = dim-self.in_ch_pts-self.in_ch_views
+        input_pts, input_feats, input_views = torch.split(x, [self.in_ch_pts, in_ch_feat, self.in_ch_views], dim=-1)
+
+        h = input_pts
+        # bias = self.pts_bias(input_feats) #if in_ch_feat == self.in_ch_feat else  input_feats
+        feat_weight = self.meta_linears(input_feats)
+        # print(feat_weight.shape) 1024(chunk)*128(netwidth)*128(netwidth)*128(netwidth)
+        feat_weight = feat_weight.view(feat_weight.shape[0],feat_weight.shape[1],128,128)
+        # print(bias.shape)
+        for i, l in enumerate(self.pts_linears):
+            if i == 6:
+                h = torch.matmul(h.unsqueeze(dim=-2),feat_weight).squeeze(dim=-2)
+            else:
+                h = self.pts_linears[i](h)
+            h = F.relu(h)
+            if i in self.skips:
+                h = torch.cat([input_pts, h], -1)
+
+
+        if self.use_viewdirs:
+            alpha = torch.relu(self.alpha_linear(h))
+            feature = self.feature_linear(h)
+            h = torch.cat([feature, input_views], -1)
+
+            for i, l in enumerate(self.views_linears):
+                h = self.views_linears[i](h)
+                h = F.relu(h)
+
+            rgb = torch.sigmoid(self.rgb_linear(h))
+            outputs = torch.cat([rgb, alpha], -1)
+        else:
+            outputs = self.output_linear(h)
+
+        return outputs
+
 class MVSNeRF(nn.Module):
-    def __init__(self, D=8, W=256, input_ch_pts=3, input_ch_views=3, input_ch_feat=8, skips=[4], net_type='v2'):
+    def __init__(self, D=8, W=256, input_ch_pts=3, input_ch_views=3, input_ch_feat=8, skips=[4], net_type='v3'):
         """
         """
         super(MVSNeRF, self).__init__()
@@ -556,6 +728,14 @@ class MVSNeRF(nn.Module):
                      input_ch_views=input_ch_views, use_viewdirs=True)
         elif 'v2' == net_type:
             self.nerf = Renderer_linear(D=D, W=W,input_ch_feat=input_ch_feat,
+                     input_ch=input_ch_pts, output_ch=4, skips=skips,
+                     input_ch_views=input_ch_views, use_viewdirs=True)
+        elif 'v3' == net_type:
+            self.nerf = Renderer_mylinear(D=D, W=W,input_ch_feat=input_ch_feat,
+                     input_ch=input_ch_pts, output_ch=4, skips=skips,
+                     input_ch_views=input_ch_views, use_viewdirs=True)
+        elif 'v4' == net_type:
+            self.nerf = Renderer_mylinear2(D=D, W=W,input_ch_feat=input_ch_feat,
                      input_ch=input_ch_pts, output_ch=4, skips=skips,
                      input_ch_views=input_ch_views, use_viewdirs=True)
 
