@@ -640,7 +640,9 @@ class Renderer_mylinear2(nn.Module):
             [nn.Linear(input_ch, W, bias=True)] + [nn.Linear(W, W, bias=True) if i not in self.skips else nn.Linear(W + input_ch, W) for i in range(D-1)])
         self.pts_bias = nn.Linear(input_ch_feat, W)
         self.views_linears = nn.ModuleList([nn.Linear(input_ch_views + W, W//2)])
-        self.meta_linears = nn.Linear(input_ch_feat, 128*128)
+        self.meta_linears1 = nn.Linear(input_ch_feat, 128*4) 
+        self.meta_linears2 = nn.Linear(4, 128)
+        # self.meta_linears = nn.ModuleList([nn.Linear(input_ch_feat, 128*128)])
 
 
         if use_viewdirs:
@@ -655,6 +657,9 @@ class Renderer_mylinear2(nn.Module):
         self.feature_linear.apply(weights_init)
         self.alpha_linear.apply(weights_init)
         self.rgb_linear.apply(weights_init)
+        self.meta_linears1.apply(weights_init)
+        self.meta_linears2.apply(weights_init)
+        
         
 
     def forward_alpha(self,x):
@@ -668,7 +673,6 @@ class Renderer_mylinear2(nn.Module):
             h = F.relu(h)
             if i in self.skips:
                 h = torch.cat([input_pts, h], -1)
-
         alpha = self.alpha_linear(h)
         return alpha
 
@@ -676,12 +680,12 @@ class Renderer_mylinear2(nn.Module):
         dim = x.shape[-1]
         in_ch_feat = dim-self.in_ch_pts-self.in_ch_views
         input_pts, input_feats, input_views = torch.split(x, [self.in_ch_pts, in_ch_feat, self.in_ch_views], dim=-1)
-
         h = input_pts
         # bias = self.pts_bias(input_feats) #if in_ch_feat == self.in_ch_feat else  input_feats
-        feat_weight = self.meta_linears(input_feats)
+        feat_weight = self.meta_linears1(input_feats)
+        feat_weight = feat_weight.reshape(feat_weight.shape[0], feat_weight.shape[1], 128, 4)
+        feat_weight = self.meta_linears2(feat_weight)
         # print(feat_weight.shape) 1024(chunk)*128(netwidth)*128(netwidth)*128(netwidth)
-        feat_weight = feat_weight.view(feat_weight.shape[0],feat_weight.shape[1],128,128)
         # print(bias.shape)
         for i, l in enumerate(self.pts_linears):
             if i == 6:
@@ -710,7 +714,7 @@ class Renderer_mylinear2(nn.Module):
         return outputs
 
 class MVSNeRF(nn.Module):
-    def __init__(self, D=8, W=256, input_ch_pts=3, input_ch_views=3, input_ch_feat=8, skips=[4], net_type='v3'):
+    def __init__(self, D=8, W=256, input_ch_pts=3, input_ch_views=3, input_ch_feat=8, skips=[4], net_type='v2'):
         """
         """
         super(MVSNeRF, self).__init__()
